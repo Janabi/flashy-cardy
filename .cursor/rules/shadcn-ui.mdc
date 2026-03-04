@@ -1,0 +1,32 @@
+---
+alwaysApply: true
+---
+# shadcn UI
+
+This project uses [shadcn/ui](https://ui.shadcn.com/) for all UI elements.
+
+## Configuration
+
+shadcn is configured in [components.json](mdc:components.json) with:
+
+- **Style:** new-york
+- **RSC:** enabled
+- **Icon library:** lucide
+- **CSS variables:** enabled
+- **Base color:** neutral
+
+## Component Aliases
+
+- UI components: `@/components/ui`
+- General components: `@/components`
+- Utilities: `@/lib/utils`
+- Hooks: `@/hooks`
+
+## Rules
+
+- Always use shadcn UI components instead of building custom UI primitives.
+- If shadcn is not initialized, run: `npx shadcn@latest init`
+- If a required component is not yet installed, add it with: `npx shadcn@latest add <component>`
+  - Example: `npx shadcn@latest add button`
+- Import UI components from `@/components/ui/<component>`.
+- Use the `cn()` utility from `@/lib/utils` for conditional class merging.
