@@ -1,0 +1,66 @@
+---
+alwaysApply: true
+---
+# Clerk Authentication & Data Access Rules
+
+All authentication is handled by [Clerk](https://clerk.com). The middleware in [middleware.ts](mdc:src/middleware.ts) uses `clerkMiddleware()` to protect routes.
+
+## Getting the Current User
+
+In **Server Components** and **Server Actions**, use `auth()` from `@clerk/nextjs/server`:
+
+```ts
+import { auth } from "@clerk/nextjs/server";
+
+const { userId } = await auth();
+if (!userId) throw new Error("Unauthorized");
+```
+
+In **API Route Handlers**, use the same pattern:
+
+```ts
+import { auth } from "@clerk/nextjs/server";
+
+export async function GET() {
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  // ...
+}
+```
+
+## User-Scoped Data Access
+
+Every database query **must** be scoped to the authenticated user. The `userId` from Clerk maps to the `userId` column in [schema.ts](mdc:src/db/schema.ts).
+
+- **Reads**: Always filter by `userId` so users only see their own data.
+
+```ts
+const userDecks = await db.query.decks.findMany({
+  where: eq(decks.userId, userId),
+});
+```
+
+- **Writes**: Always set `userId` on insert.
+
+```ts
+await db.insert(decks).values({ userId, title: "My Deck" });
+```
+
+- **Updates / Deletes**: Always include a `userId` check in the `where` clause to prevent users from modifying other users' resources.
+
+```ts
+await db.update(decks).set({ title }).where(and(eq(decks.id, deckId), eq(decks.userId, userId)));
+await db.delete(decks).where(and(eq(decks.id, deckId), eq(decks.userId, userId)));
+```
+
+- **Child resources** (e.g., `cards`): When accessing cards, verify ownership through the parent `deck` by joining or subquerying on `decks.userId`. Never trust a `deckId` from user input without confirming it belongs to the authenticated user.
+
+## Rules
+
+- Never expose data from one user to another. Every data-fetching or mutating operation must be gated on `userId`.
+- Never trust client-supplied IDs alone — always pair them with a `userId` check in the query.
+- Always call `auth()` and verify `userId` is non-null before any data operation.
+- Use `<SignedIn>`, `<SignedOut>`, and `<UserButton />` components from `@clerk/nextjs` for client-side auth UI.
+- Do not store passwords or implement custom auth flows — Clerk handles all of this.
