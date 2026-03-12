@@ -3,47 +3,102 @@ alwaysApply: true
 ---
 # Data Patterns
 
-## Data Retrieval
+## Database Query & Mutation Helpers
 
-All data fetching must happen in **Server Components**. Never fetch data on the client or in API route handlers unless absolutely necessary. Use the Drizzle `db` instance directly inside server components.
+All direct Drizzle `db` calls must live in helper functions inside `src/db/queries/`. **Never import `db` in server components, server actions, or API route handlers.** Instead, import and call the appropriate helper function from `@/db/queries`.
+
+Organize helpers by domain — one file per table or logical grouping (e.g., `decks.ts`, `cards.ts`).
+
+### Query helpers (reads)
+
+Query helpers are plain `async` functions that accept the parameters they need (always including `userId` for user-scoped data) and return typed results.
+
+```ts
+// src/db/queries/decks.ts
+import { db } from "@/db";
+import { decks } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
+
+export async function getDecksByUserId(userId: string) {
+  return db.query.decks.findMany({
+    where: eq(decks.userId, userId),
+  });
+}
+
+export async function getDeckById(deckId: string, userId: string) {
+  return db.query.decks.findFirst({
+    where: and(eq(decks.id, deckId), eq(decks.userId, userId)),
+  });
+}
+```
+
+### Mutation helpers (writes)
+
+Mutation helpers follow the same pattern — plain `async` functions that accept typed input and `userId`, and perform the Drizzle operation.
+
+```ts
+// src/db/queries/decks.ts (continued)
+export async function insertDeck(userId: string, title: string) {
+  await db.insert(decks).values({ userId, title });
+}
+
+export async function updateDeckTitle(deckId: string, userId: string, title: string) {
+  await db
+    .update(decks)
+    .set({ title })
+    .where(and(eq(decks.id, deckId), eq(decks.userId, userId)));
+}
+
+export async function deleteDeck(deckId: string, userId: string) {
+  await db
+    .delete(decks)
+    .where(and(eq(decks.id, deckId), eq(decks.userId, userId)));
+}
+```
+
+## Data Retrieval in Server Components
+
+Server components call query helpers — they never use `db` directly.
 
 ```tsx
 // app/decks/page.tsx (Server Component)
-import { db } from "@/db";
-import { decks } from "@/db/schema";
+import { getDecksByUserId } from "@/db/queries/decks";
 import { auth } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
 
 export default async function DecksPage() {
   const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  if (!userId) redirect("/");
 
-  const userDecks = await db.query.decks.findMany({
-    where: eq(decks.userId, userId),
-  });
+  const userDecks = await getDecksByUserId(userId);
 
   return <DeckList decks={userDecks} />;
 }
 ```
 
-## Mutations (Insert / Update / Delete)
+## Mutations in Server Actions
 
-All data mutations must happen in **Server Actions** (functions marked with `"use server"`). Never mutate data inside server components, client components, or API route handlers.
+Server actions validate input with Zod, authenticate with Clerk, then delegate to a mutation helper. They never use `db` directly.
 
 ```ts
 "use server";
 
-import { db } from "@/db";
-import { decks } from "@/db/schema";
+import { insertDeck } from "@/db/queries/decks";
 import { auth } from "@clerk/nextjs/server";
-import { eq, and } from "drizzle-orm";
+import { z } from "zod";
+
+const createDeckSchema = z.object({
+  title: z.string().min(1).max(100),
+});
+
+type CreateDeckInput = z.infer<typeof createDeckSchema>;
 
 export async function createDeck(data: CreateDeckInput) {
   const validated = createDeckSchema.parse(data);
   const { userId } = await auth();
   if (!userId) throw new Error("Unauthorized");
 
-  await db.insert(decks).values({ userId, title: validated.title });
+  await insertDeck(userId, validated.title);
 }
 ```
 
@@ -72,8 +127,11 @@ export async function createDeck(data: CreateDeckInput) {
 
 ## Rules
 
-- **Reads** → Server Components only.
-- **Writes (insert / update / delete)** → Server Actions only.
+- **All `db` usage** → `src/db/queries/` helper functions only. Never import `db` outside this directory.
+- **Reads** → Server components call query helpers from `@/db/queries`.
+- **Writes** → Server actions call mutation helpers from `@/db/queries`.
+- **One file per domain** → e.g., `src/db/queries/decks.ts`, `src/db/queries/cards.ts`.
+- **User-scoped** → Every helper that touches user data must accept `userId` as a parameter and include it in every `where` clause.
 - **Validation** → Zod schemas for every server action input.
 - **Types** → Derive TypeScript types from Zod schemas via `z.infer`. Never use `FormData` as a parameter type.
 - Call `zodSchema.parse()` at the top of every server action before any database operation.

@@ -1,9 +1,9 @@
 ---
 alwaysApply: true
 ---
-# shadcn UI
+# shadcn UI — Strict UI Policy
 
-This project uses [shadcn/ui](https://ui.shadcn.com/) for all UI elements.
+This project uses [shadcn/ui](https://ui.shadcn.com/) as its **exclusive** UI component library. **ABSOLUTELY NO custom UI components, custom styled elements, or hand-rolled primitives may be created.** Every visible UI element — buttons, dialogs, cards, inputs, dropdowns, tooltips, etc. — **must** come from shadcn/ui.
 
 ## Configuration
 
@@ -24,9 +24,32 @@ shadcn is configured in [components.json](mdc:components.json) with:
 
 ## Rules
 
-- Always use shadcn UI components instead of building custom UI primitives.
+- **No custom UI.** Never create custom buttons, modals, cards, inputs, tooltips, dropdowns, or any other UI primitive. If shadcn/ui offers a component for it, use it. If it doesn't, find the closest shadcn/ui component and adapt it — do not build from scratch.
+- **No raw HTML elements for UI.** Do not use bare `<button>`, `<input>`, `<dialog>`, `<div>`-based modals, or similar elements as UI controls. Always wrap them with or replace them by the corresponding shadcn/ui component (`Button`, `Input`, `Dialog`, etc.).
 - If shadcn is not initialized, run: `npx shadcn@latest init`
 - If a required component is not yet installed, add it with: `npx shadcn@latest add <component>`
   - Example: `npx shadcn@latest add button`
 - Import UI components from `@/components/ui/<component>`.
 - Use the `cn()` utility from `@/lib/utils` for conditional class merging.
+
+## Clerk Authentication UI
+
+Clerk sign-in and sign-up flows **must** use shadcn/ui components — never Clerk's default styled buttons or redirect-based pages.
+
+- **Buttons:** Use the shadcn `<Button>` component for all "Sign In" and "Sign Up" triggers. Do **not** use Clerk's `<SignInButton>` or `<SignUpButton>` with their default rendering. Instead, pass a shadcn `<Button>` as the child:
+
+```tsx
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { Button } from "@/components/ui/button";
+
+<SignInButton mode="modal">
+  <Button variant="outline">Sign In</Button>
+</SignInButton>
+
+<SignUpButton mode="modal">
+  <Button>Sign Up</Button>
+</SignUpButton>
+```
+
+- **Modal mode:** Always set `mode="modal"` on `<SignInButton>` and `<SignUpButton>` so Clerk launches its authentication flow in an overlay modal. Never redirect users to a separate sign-in/sign-up page.
+- Do **not** create custom sign-in or sign-up pages using `<SignIn />` or `<SignUp />` route components. All auth entry points must go through the modal.
