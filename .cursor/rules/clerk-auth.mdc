@@ -5,9 +5,21 @@ alwaysApply: true
 
 All authentication is handled by [Clerk](https://clerk.com). The middleware in [middleware.ts](mdc:src/middleware.ts) uses `clerkMiddleware()` to protect routes.
 
+**This app has no dedicated sign-in or sign-up page.** The home page (`/`) contains the sign-in and sign-up modal buttons. When an unauthenticated user tries to access a protected page, always redirect them to `/`.
+
 ## Getting the Current User
 
-In **Server Components** and **Server Actions**, use `auth()` from `@clerk/nextjs/server`:
+In **Server Components** (protected pages), use `auth()` and redirect unauthenticated users to the home page:
+
+```ts
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+
+const { userId } = await auth();
+if (!userId) redirect("/");
+```
+
+In **Server Actions**, use `auth()` and throw if not authenticated:
 
 ```ts
 import { auth } from "@clerk/nextjs/server";
@@ -16,7 +28,7 @@ const { userId } = await auth();
 if (!userId) throw new Error("Unauthorized");
 ```
 
-In **API Route Handlers**, use the same pattern:
+In **API Route Handlers**, return a 401 response:
 
 ```ts
 import { auth } from "@clerk/nextjs/server";
@@ -62,5 +74,7 @@ await db.delete(decks).where(and(eq(decks.id, deckId), eq(decks.userId, userId))
 - Never expose data from one user to another. Every data-fetching or mutating operation must be gated on `userId`.
 - Never trust client-supplied IDs alone — always pair them with a `userId` check in the query.
 - Always call `auth()` and verify `userId` is non-null before any data operation.
+- **No sign-in or sign-up pages.** Do not create dedicated `/sign-in` or `/sign-up` routes. All auth entry points use Clerk's modal mode from the home page.
+- **Redirect to home.** When an unauthenticated user hits a protected server component page, use `redirect("/")` — never redirect to a `/sign-in` route.
 - Use `<SignedIn>`, `<SignedOut>`, and `<UserButton />` components from `@clerk/nextjs` for client-side auth UI.
 - Do not store passwords or implement custom auth flows — Clerk handles all of this.
