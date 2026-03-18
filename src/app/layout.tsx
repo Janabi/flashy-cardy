@@ -1,14 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  Show,
-  UserButton,
-} from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
-import { Button } from "@/components/ui/button";
+import { ClerkHeaderAuth } from "@/components/clerk-header-auth";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
@@ -34,17 +28,7 @@ export default function RootLayout({
         <ClerkProvider appearance={{ baseTheme: dark }}>
           <TooltipProvider>
             <header className="flex items-center justify-end gap-4 p-4">
-              <Show when="signed-out">
-                <SignInButton mode="modal" forceRedirectUrl="/dashboard">
-                  <Button variant="outline">Sign In</Button>
-                </SignInButton>
-                <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
-                  <Button>Sign Up</Button>
-                </SignUpButton>
-              </Show>
-              <Show when="signed-in">
-                <UserButton />
-              </Show>
+              <ClerkHeaderAuth />
             </header>
             {children}
           </TooltipProvider>
