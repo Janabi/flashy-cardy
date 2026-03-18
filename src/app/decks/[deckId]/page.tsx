@@ -17,14 +17,17 @@ import { EditCardDialog } from "./_components/edit-card-dialog";
 import { EditDeckDialog } from "./_components/edit-deck-dialog";
 import { DeleteCardDialog } from "./_components/delete-card-dialog";
 import { DeleteDeckDialog } from "./_components/delete-deck-dialog";
+import { GenerateCardsButton } from "./_components/generate-cards-button";
 
 export default async function DeckPage({
   params,
 }: {
   params: Promise<{ deckId: string }>;
 }) {
-  const { userId } = await auth();
+  const { userId, has } = await auth();
   if (!userId) redirect("/");
+
+  const hasAIFeature = has({ feature: "ai_flashcard_generation" }) ?? false;
 
   const { deckId } = await params;
   const deck = await getDeckById(deckId, userId);
@@ -71,16 +74,22 @@ export default async function DeckPage({
         </div>
       </div>
 
-      {deck.cards.length > 0 && (
-        <div className="mb-8">
+      <div className="mb-8 flex items-center gap-3">
+        {deck.cards.length > 0 && (
           <Button asChild>
             <Link href={`/decks/${deck.id}/study`}>
               <BookOpen className="mr-2 h-4 w-4" />
               Study Deck
             </Link>
           </Button>
-        </div>
-      )}
+        )}
+        <GenerateCardsButton
+          deckId={deck.id}
+          title={deck.title}
+          description={deck.description}
+          hasAIFeature={hasAIFeature}
+        />
+      </div>
 
       <Separator className="mb-8" />
 

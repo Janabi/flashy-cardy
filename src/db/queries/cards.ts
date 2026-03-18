@@ -54,3 +54,19 @@ export async function deleteCard(cardId: string, userId: string) {
 
   await db.delete(cards).where(eq(cards.id, cardId));
 }
+
+export async function insertManyCards(
+  deckId: string,
+  userId: string,
+  cardData: { front: string; back: string }[],
+) {
+  const deck = await db.query.decks.findFirst({
+    where: and(eq(decks.id, deckId), eq(decks.userId, userId)),
+  });
+
+  if (!deck) throw new Error("Deck not found");
+
+  await db
+    .insert(cards)
+    .values(cardData.map((c) => ({ deckId, front: c.front, back: c.back })));
+}
