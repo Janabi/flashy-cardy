@@ -1,0 +1,106 @@
+---
+description: Clerk Billing setup, pricing pages, and access control via Plans and Features
+alwaysApply: true
+---
+
+# Clerk Billing (B2C)
+
+This app uses [Clerk Billing](https://clerk.com/docs/nextjs/guides/billing/for-b2c) for subscriptions and payments. Plans and pricing are managed in the Clerk Dashboard — not in Stripe directly.
+
+> Billing is currently in Beta. Pin SDK and `clerk-js` versions to avoid breaking changes.
+
+## Plans
+
+| Slug        | Description       |
+|-------------|-------------------|
+| `free_user` | Free tier         |
+| `pro`       | Paid pro tier     |
+
+## Features
+
+| Slug                      | Description                        |
+|---------------------------|------------------------------------|
+| `3_decks_limit`           | Limited to 3 decks                 |
+| `unlimited_decks`         | Unlimited deck creation            |
+| `ai_flashcard_generation` | AI-powered flashcard generation    |
+
+## Pricing Page
+
+Use the `<PricingTable />` component on a dedicated page:
+
+```tsx
+// app/pricing/page.tsx
+import { PricingTable } from "@clerk/nextjs";
+
+export default function PricingPage() {
+  return (
+    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "0 1rem" }}>
+      <PricingTable />
+    </div>
+  );
+}
+```
+
+## Access Control
+
+### Server-side — `has()`
+
+Use `has()` from the `auth()` object to gate access by **plan** or **feature**.
+
+```tsx
+import { auth } from "@clerk/nextjs/server";
+
+export default async function ProPage() {
+  const { has } = await auth();
+
+  if (!has({ plan: "pro" })) {
+    return <p>Upgrade to Pro to access this content.</p>;
+  }
+
+  return <h1>Pro Content</h1>;
+}
+```
+
+```tsx
+import { auth } from "@clerk/nextjs/server";
+
+export default async function AiGeneratePage() {
+  const { has } = await auth();
+
+  if (!has({ feature: "ai_flashcard_generation" })) {
+    return <p>AI flashcard generation requires a Pro subscription.</p>;
+  }
+
+  return <h1>Generate Flashcards with AI</h1>;
+}
+```
+
+### Client-side — `<Show>`
+
+Use `<Show>` to conditionally render UI based on a plan or feature. Pass a `fallback` for users without access.
+
+```tsx
+import { Show } from "@clerk/nextjs";
+
+<Show
+  when={{ plan: "pro" }}
+  fallback={<p>Upgrade to Pro to unlock this feature.</p>}
+>
+  <ProFeatureWidget />
+</Show>
+
+<Show
+  when={{ feature: "unlimited_decks" }}
+  fallback={<p>You have reached the free deck limit.</p>}
+>
+  <CreateDeckButton />
+</Show>
+```
+
+## Rules
+
+- Use `has({ plan: "..." })` or `has({ feature: "..." })` for server-side gating.
+- Use `<Show when={{ plan: "..." }}>` or `<Show when={{ feature: "..." }}>` for client-side gating.
+- Always reference plans and features by their exact slugs listed above.
+- Do not create custom subscription logic or integrate Stripe directly — Clerk handles all payment processing.
+- Place the pricing page at `/pricing` using the `<PricingTable />` component.

@@ -1,10 +1,17 @@
 "use server";
 
-import { insertDeck, updateDeck, deleteDeck } from "@/db/queries/decks";
+import {
+  insertDeck,
+  updateDeck,
+  deleteDeck,
+  getDeckCountByUserId,
+} from "@/db/queries/decks";
 import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+
+const FREE_DECK_LIMIT = 3;
 
 const createDeckSchema = z.object({
   title: z.string().min(1, "Title is required").max(100),
@@ -15,8 +22,17 @@ type CreateDeckInput = z.infer<typeof createDeckSchema>;
 
 export async function createDeckAction(data: CreateDeckInput) {
   const validated = createDeckSchema.parse(data);
-  const { userId } = await auth();
+  const { userId, has } = await auth();
   if (!userId) throw new Error("Unauthorized");
+
+  if (!has({ feature: "unlimited_decks" })) {
+    const deckCount = await getDeckCountByUserId(userId);
+    if (deckCount >= FREE_DECK_LIMIT) {
+      throw new Error(
+        "Free plan is limited to 3 decks. Upgrade to Pro for unlimited decks.",
+      );
+    }
+  }
 
   await insertDeck(userId, validated.title, validated.description?.trim() || null);
 

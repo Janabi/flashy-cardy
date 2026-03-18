@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ export function EditDeckDialog({
   currentTitle,
   currentDescription,
 }: EditDeckDialogProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(currentTitle);
   const [description, setDescription] = useState(currentDescription ?? "");
@@ -51,6 +53,7 @@ export function EditDeckDialog({
         description: description || undefined,
       });
       setOpen(false);
+      router.refresh();
     });
   }
 

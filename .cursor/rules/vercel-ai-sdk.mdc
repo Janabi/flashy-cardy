@@ -1,0 +1,42 @@
+---
+alwaysApply: true
+---
+# Vercel AI SDK — Anthropic Integration
+
+This project uses the [Vercel AI SDK](https://sdk.vercel.ai/) (`ai` npm package) with **Anthropic Claude** for **AI flashcard generation**.
+
+## Model
+
+Default model: `claude-sonnet-4-20250514`. Override with env `ANTHROPIC_MODEL` if needed.
+
+Set `ANTHROPIC_API_KEY` in the environment (required for Anthropic).
+
+## Structured Data Generation
+
+Use `generateText` with `Output.object()` to produce typed, schema-validated responses. Define the output schema with Zod.
+
+```ts
+import { generateText, Output } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
+import { z } from "zod";
+
+const schema = z.object({
+  cards: z.array(
+    z.object({ front: z.string(), back: z.string() }),
+  ),
+});
+
+const { output } = await generateText({
+  model: anthropic("claude-sonnet-4-20250514"),
+  output: Output.object({ schema }),
+  prompt: "Generate flashcards about photosynthesis.",
+});
+```
+
+## Rules
+
+- Import `generateText` and `Output` from `"ai"`. Use `anthropic` from `"@ai-sdk/anthropic"`.
+- Always define a Zod schema for the expected output and pass it via `Output.object({ schema })`.
+- AI calls must happen inside **server actions** (never in client components or server components). Follow the existing server action patterns: Zod input validation, `auth()` check, and feature gating via `has({ feature: "ai_flashcard_generation" })`.
+- Do not call the Anthropic REST API directly — use the Vercel AI SDK provider.
+- Keep AI-related server actions in `src/actions/` alongside existing actions.
