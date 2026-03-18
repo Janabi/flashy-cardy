@@ -33,7 +33,7 @@ export function GenerateCardsButton({
   const noDescriptionTooltip = (
     <TooltipContent className="max-w-xs">
       <p>
-        Add a deck description first—AI uses it to know what topic to create
+        Add a deck description first AI uses it to know what topic to create
         flashcards for. Edit your deck to add one.
       </p>
     </TooltipContent>

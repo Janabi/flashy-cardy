@@ -3,7 +3,7 @@ alwaysApply: true
 ---
 # Clerk Authentication & Data Access Rules
 
-All authentication is handled by [Clerk](https://clerk.com). The middleware in [middleware.ts](mdc:src/middleware.ts) uses `clerkMiddleware()` to protect routes.
+All authentication is handled by [Clerk](https://clerk.com). The middleware in [middleware.ts](mdc:src/middleware.ts) uses `clerkMiddleware()` with `createRouteMatcher` so `/dashboard` and `/decks` redirect unauthenticated users to `/` (never to Clerk’s hosted sign-in page).
 
 **This app has no dedicated sign-in or sign-up page.** The home page (`/`) contains the sign-in and sign-up modal buttons. When an unauthenticated user tries to access a protected page, always redirect them to `/`.
 
@@ -76,5 +76,5 @@ await db.delete(decks).where(and(eq(decks.id, deckId), eq(decks.userId, userId))
 - Always call `auth()` and verify `userId` is non-null before any data operation.
 - **No sign-in or sign-up pages.** Do not create dedicated `/sign-in` or `/sign-up` routes. All auth entry points use Clerk's modal mode from the home page.
 - **Redirect to home.** When an unauthenticated user hits a protected server component page, use `redirect("/")` — never redirect to a `/sign-in` route.
-- Use `<SignedIn>`, `<SignedOut>`, and `<UserButton />` components from `@clerk/nextjs` for client-side auth UI.
+- **Client-side auth UI:** Use modal `<SignInButton mode="modal">` / `<SignUpButton mode="modal">` with shadcn `<Button>` children, and `<UserButton />`. In Clerk v7 App Router, `SignedIn`/`SignedOut` are not exported from `@clerk/nextjs` for RSC — use `useAuth()` in a small client component (see [clerk-header-auth.tsx](mdc:src/components/clerk-header-auth.tsx)) or `<Show when="signed-in">` / `<Show when="signed-out">` in Server Components. Do **not** use `auth.protect()` or `redirectToSignIn()` in middleware; those send users away from `/` to a sign-in URL.
 - Do not store passwords or implement custom auth flows — Clerk handles all of this.
